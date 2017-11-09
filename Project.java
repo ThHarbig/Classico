@@ -50,8 +50,8 @@ public class Project {
 
 			comcla.toFile(args0[2], comcla.claden);
 			comcla.toFile(args0[3], comcla.supportTree);
-			comcla.toFile(args0[5], comcla.notSupportTree);
-			comcla.splitKeys();
+			comcla.toFile(args0[4], comcla.notSupportTree);
+			comcla.splitKeys(args0[5]);
 
 			HashMap<String, List<Node>> hm = comcla.supportTree.get(key);
 			for (String s : hm.keySet()) {
@@ -63,15 +63,6 @@ public class Project {
 					}
 				}
 			}
-			FileWriter fw;
-			fw = new FileWriter(args0[4]);
-			BufferedWriter bw = new BufferedWriter(fw);
-			for (int i : comcla.splitKeys.keySet()) {
-				bw.write(i + ":\n");
-				bw.write(comcla.splitKeys.get(i).toString());
-				bw.write("\n");
-			}
-			bw.close();
 
 			// System.out.println(comcla.tree.toString());
 
@@ -124,7 +115,7 @@ public class Project {
 			size.add(l.get(s).size());
 		}
 		Collections.sort(size);
-		//System.out.println(size.toString());
+		// System.out.println(size.toString());
 		int max = size.get(size.size() - 1);
 		if (max == size.get(0)) {
 			max++;
@@ -149,7 +140,7 @@ public class Project {
 
 	}
 
-	public void splitKeys() {
+	public void splitKeys(String filename) {
 		for (int key : supportTree.keySet()) {
 			for (String s : supportTree.get(key).keySet()) {
 				for (Node n : supportTree.get(key).get(s)) {
@@ -157,7 +148,24 @@ public class Project {
 				}
 			}
 		}
-		//System.out.println(splitKeys.toString());
+		// System.out.println(splitKeys.toString());
+		FileWriter fw;
+		try {
+			fw = new FileWriter(filename);
+			BufferedWriter bw = new BufferedWriter(fw);
+			for (int i : splitKeys.keySet()) {
+				bw.write(i + "\t");
+				Collections.sort(splitKeys.get(i));
+				for(int j : splitKeys.get(i)) {
+					bw.write(tree.getNode(i));	
+				}
+				bw.write("\n");
+			}
+			bw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void label(NewickTree tree, Integer key) {
@@ -213,15 +221,16 @@ public class Project {
 			fw = new FileWriter(filename);
 			BufferedWriter bw = new BufferedWriter(fw);
 			for (int i : claden.keySet()) {
-				//System.out.println(i + ":");
+				// System.out.println(i + ":");
 				bw.write(i + ":\n");
 				for (String l : claden.get(i).keySet()) {
-					//System.out.println(l + ":");
+					// System.out.println(l + ":");
 					bw.write(l + ":\n");
 					for (Node n : claden.get(i).get(l)) {
-						 /*System.out.println(
-						 n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i) + ":" +
-						 n.toNewickString());*/
+						/*
+						 * System.out.println( n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i)
+						 * + ":" + n.toNewickString());
+						 */
 						bw.write(n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i) + ":" + n.toNewickString()
 								+ "\n");
 					}
