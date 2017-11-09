@@ -63,13 +63,6 @@ public class Node {
 			return (name + ":" + String.format( "%.3f", length ));
 		}
 	}
-	
-	
-	public void setPosSNP(String posSNP) {
-		this.posSNP = posSNP;
-	}
-
-
 
 	/**
 	 * Gibt nur die Informationen des Knotens zur�ck
@@ -95,7 +88,6 @@ public class Node {
 	public Node getParent() {
 		return parent;
 	}
-
 	
 	/**
 	 * Fuegt der Liste der Kindknoten einen Knoten hinzu
@@ -105,7 +97,6 @@ public class Node {
 		this.children.add(child);
 	}
 
-
 	/**
 	 * Setzt den Elternknoten des Knoten
 	 * @param parent der Elternknoten
@@ -114,25 +105,20 @@ public class Node {
 		this.parent = parent;
 	}
 	
-
-	
 	public int getId() {
 		return id;
 	}
 
-
 	public void setId(int id) {
 		this.id = id;
 	}
-
+	
+	public void setPosSNP(String posSNP) {
+		this.posSNP = posSNP;
+	}
 
 	public Map<Integer, Set<String>> getLabel() {
 		return label;
-	}
-
-
-	public void setLabel(Map<Integer, Set<String>> label) {
-		this.label = label;
 	}
 	
 	public void setLabel(int pos, String snp) {
