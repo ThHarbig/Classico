@@ -18,7 +18,8 @@ public class Project {
 	private SNPTable snp;
 	private NewickTree tree;
 	private Map<Integer, HashMap<String, List<Node>>> claden = new HashMap<Integer, HashMap<String, List<Node>>>();
-	private Map<Integer, HashMap<String, List<Node>>> smallCladen = new HashMap<Integer, HashMap<String, List<Node>>>();
+	private Map<Integer, HashMap<String, List<Node>>> supportTree = new HashMap<Integer, HashMap<String, List<Node>>>();
+	private Map<Integer, HashMap<String, List<Node>>> notSupportTree = new HashMap<Integer, HashMap<String, List<Node>>>();
 	private Map<Integer, List<Integer>> splitKeys = new HashMap<Integer, List<Integer>>();
 
 	public Project(String snpFile, String newickTreeFile) {
@@ -32,7 +33,7 @@ public class Project {
 	}
 
 	public static void main(String[] args0) throws IOException {
-		if (args0.length == 4) {
+		if (args0.length == 6) {
 			Project comcla = new Project(args0[0], args0[1]);
 			int key = 0;
 			for (Integer pos : comcla.snp.getSNPs()) {
@@ -42,26 +43,37 @@ public class Project {
 				comcla.evaluateCladen(pos);
 			}
 
-			System.out.println(comcla.tree);
+			// System.out.println(comcla.tree);
 			for (Node n : comcla.tree.getNodeList()) {
-				System.out.println(n.toString());
+				// System.out.println(n.toString());
 			}
 
 			comcla.toFile(args0[2], comcla.claden);
-			comcla.toFile(args0[3], comcla.smallCladen);
+			comcla.toFile(args0[3], comcla.supportTree);
+			comcla.toFile(args0[5], comcla.notSupportTree);
 			comcla.splitKeys();
-			
-			HashMap<String, List<Node>> hm = comcla.smallCladen.get(key);
-			for(String s : hm.keySet()) {
-				for(Node nl : hm.get(s)) {
-					for(Node nt : comcla.tree.getNodeList()) {
-						if(nt.getId() == nl.getId()) {
-							nt.setPosSNP("-" + key + "-" + s.substring(1, 2));
+
+			HashMap<String, List<Node>> hm = comcla.supportTree.get(key);
+			for (String s : hm.keySet()) {
+				for (Node nl : hm.get(s)) {
+					for (Node nt : comcla.tree.getNodeList()) {
+						if (nt.getId() == nl.getId()) {
+							nt.setPosSNP("-" + key + "-" + s.substring(1, s.length() - 1));
 						}
 					}
 				}
 			}
-			System.out.println(comcla.tree.toString());
+			FileWriter fw;
+			fw = new FileWriter(args0[4]);
+			BufferedWriter bw = new BufferedWriter(fw);
+			for (int i : comcla.splitKeys.keySet()) {
+				bw.write(i + ":\n");
+				bw.write(comcla.splitKeys.get(i).toString());
+				bw.write("\n");
+			}
+			bw.close();
+
+			// System.out.println(comcla.tree.toString());
 
 			System.out.println("ready");
 		} else {
@@ -76,7 +88,7 @@ public class Project {
 			Set<String> base = node.getLabel().get(key);
 			switch (base.size()) {
 			case 0:
-				System.out.println("Key enthalten aber keine Strings");
+				System.err.println("Project:91 - Key enthalten aber keine Strings");
 				break;
 			case 1:
 				setClade(key, node, base.toString(), claden);
@@ -95,12 +107,13 @@ public class Project {
 					}
 				} else {
 					// Knoten hat keine Kinder aber zwei Basen (Darf nicht passieren)
-					System.out.println("Blatt hat zwei Basen");
+					System.err.println("Project:110 - Blatt hat zwei Basen");
 				}
 				break;
 			}
 		} else {
-			System.out.println("Key im Knoten nicht gefunden");
+			// TODO: Bedeutung??
+			System.err.println("Project:115 - Key im Knoten nicht gefunden " + key + "_" + node.getId());
 		}
 	}
 
@@ -111,13 +124,22 @@ public class Project {
 			size.add(l.get(s).size());
 		}
 		Collections.sort(size);
-		System.out.println(size.toString());
+		//System.out.println(size.toString());
 		int max = size.get(size.size() - 1);
+		if (max == size.get(0)) {
+			max++;
+		}
 		for (String s : l.keySet()) {
 			List<Node> ln = l.get(s);
 			if (ln.size() < max) {
-				for (Node n : ln) {
-					setClade(pos, n, s, smallCladen);
+				if (ln.size() == 1) {
+					for (Node n : ln) {
+						setClade(pos, n.getParent(), s, supportTree);
+					}
+				} else {
+					for (Node n : ln) {
+						setClade(pos, n.getParent(), s, notSupportTree);
+					}
 				}
 			}
 		}
@@ -128,14 +150,14 @@ public class Project {
 	}
 
 	public void splitKeys() {
-		for (int key : smallCladen.keySet()) {
-			for(String s : smallCladen.get(key).keySet()) {
-				for(Node n : smallCladen.get(key).get(s)) {
+		for (int key : supportTree.keySet()) {
+			for (String s : supportTree.get(key).keySet()) {
+				for (Node n : supportTree.get(key).get(s)) {
 					setInt(n.getId(), key);
 				}
 			}
 		}
-		System.out.println(splitKeys.toString());
+		//System.out.println(splitKeys.toString());
 	}
 
 	public void label(NewickTree tree, Integer key) {
@@ -152,7 +174,18 @@ public class Project {
 				}
 			}
 		}
+		List<Node> missingNodes = new ArrayList<Node>();
+		for (Node n : tree.getNodeList()) {
+			if (!n.getLabel().containsKey(key) && n.getChildren().isEmpty()) {
+				missingNodes.add(n);
 
+			}
+		}
+		if (!missingNodes.isEmpty()) {
+			// TODO: Grammatik 1 oder mehr Knoten
+			System.err.println("Baum stimmt nicht mit SNPTable ueberein, Sample " + missingNodes.toString()
+					+ " sind nicht in SNP enthalten");
+		}
 	}
 
 	public void setClade(int key, Node node, String label, Map<Integer, HashMap<String, List<Node>>> claden) {
@@ -180,19 +213,20 @@ public class Project {
 			fw = new FileWriter(filename);
 			BufferedWriter bw = new BufferedWriter(fw);
 			for (int i : claden.keySet()) {
-				System.out.println(i + ":");
+				//System.out.println(i + ":");
 				bw.write(i + ":\n");
 				for (String l : claden.get(i).keySet()) {
-					System.out.println(l + ":");
+					//System.out.println(l + ":");
 					bw.write(l + ":\n");
 					for (Node n : claden.get(i).get(l)) {
-						System.out.println(
-								n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i) + ":" + n.toNewickString());
+						 /*System.out.println(
+						 n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i) + ":" +
+						 n.toNewickString());*/
 						bw.write(n.getId() + "-" + n.getName() + "-" + n.getLabel().get(i) + ":" + n.toNewickString()
 								+ "\n");
 					}
 				}
-				System.out.println();
+				// System.out.println();
 				bw.write("\n");
 			}
 			bw.close();
@@ -201,19 +235,19 @@ public class Project {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void setInt(int id, int pos) {
-		if(splitKeys.containsKey(id)) {
+		if (splitKeys.containsKey(id)) {
 			splitKeys.get(id).add(pos);
-		}else {
+		} else {
 			List<Integer> set = new ArrayList<Integer>();
 			set.add(pos);
 			splitKeys.put(id, set);
 		}
 	}
-	
+
 	public void showCladeAtPosition(int pos) {
-		
+
 	}
 
 }
